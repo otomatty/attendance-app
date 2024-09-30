@@ -1,7 +1,12 @@
-import { Component, createSignal, onMount, Show } from "solid-js";
+import { Component, createSignal, onMount, Show, createEffect } from "solid-js";
 import { supabase } from "../../../lib/supabase";
 
-const FaceCapture: Component = () => {
+interface FaceCaptureProps {
+  onCapture: (imageData: string) => void;
+  trigger: boolean;
+}
+
+const FaceCapture: Component<FaceCaptureProps> = (props) => {
   let videoRef: HTMLVideoElement | undefined;
   let canvasRef: HTMLCanvasElement | undefined;
   const [capturedImage, setCapturedImage] = createSignal<string | null>(null);
@@ -23,6 +28,12 @@ const FaceCapture: Component = () => {
     }
   });
 
+  createEffect(() => {
+    if (props.trigger) {
+      captureImage();
+    }
+  });
+
   const captureImage = () => {
     if (videoRef && canvasRef) {
       const context = canvasRef.getContext("2d");
@@ -30,6 +41,7 @@ const FaceCapture: Component = () => {
         context.drawImage(videoRef, 0, 0, 640, 480);
         const imageDataUrl = canvasRef.toDataURL("image/jpeg");
         setCapturedImage(imageDataUrl);
+        props.onCapture(imageDataUrl);
       }
     }
   };
