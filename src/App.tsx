@@ -1,35 +1,21 @@
-import { createSignal } from 'solid-js'
-import solidLogo from './assets/solid.svg'
-import viteLogo from '/vite.svg'
-import './App.css'
+import { Component } from "solid-js";
+import { Router, Route } from "@solidjs/router";
+import Home from "./pages/Home/Home";
+import AdminLogin from "./pages/AdminLogin/AdminLogin";
+import AdminDashboard from "./pages/AdminDashboard/AdminDashboard";
+import AttendanceEdit from "./pages/AttendanceEdit/AttendanceEdit";
+import Reports from "./pages/Reports/Reports";
 
-function App() {
-  const [count, setCount] = createSignal(0)
-
+const App: Component = () => {
   return (
-    <>
-      <div>
-        <a href="https://vitejs.dev" target="_blank">
-          <img src={viteLogo} class="logo" alt="Vite logo" />
-        </a>
-        <a href="https://solidjs.com" target="_blank">
-          <img src={solidLogo} class="logo solid" alt="Solid logo" />
-        </a>
-      </div>
-      <h1>Vite + Solid</h1>
-      <div class="card">
-        <button onClick={() => setCount((count) => count + 1)}>
-          count is {count()}
-        </button>
-        <p>
-          Edit <code>src/App.tsx</code> and save to test HMR
-        </p>
-      </div>
-      <p class="read-the-docs">
-        Click on the Vite and Solid logos to learn more
-      </p>
-    </>
-  )
-}
+    <Router>
+      <Route path="/" component={Home} />
+      <Route path="/admin/login" component={AdminLogin} />
+      <Route path="/admin/dashboard" component={AdminDashboard} />
+      <Route path="/admin/attendance/edit" component={AttendanceEdit} />
+      <Route path="/admin/reports" component={Reports} />
+    </Router>
+  );
+};
 
-export default App
+export default App;
