@@ -51,7 +51,7 @@ const AdminLogin: Component = () => {
     }
   };
 
-  const handleQRLogin = async (employeeId: string) => {
+  const handleQRScan = async (decodedText: string) => {
     setError(null);
 
     try {
@@ -59,7 +59,7 @@ const AdminLogin: Component = () => {
       const { data, error } = await supabase
         .from("employees")
         .select("id, email, is_admin")
-        .eq("id", employeeId)
+        .eq("qr_code", decodedText)
         .single();
 
       if (error) throw error;
@@ -107,11 +107,15 @@ const AdminLogin: Component = () => {
     }
   };
 
+  const handleQRError = (error: string) => {
+    setError(error);
+  };
+
   return (
     <div class="admin-login">
       <h1>管理者ログイン</h1>
       {showQRScanner() ? (
-        <QRScanner onScan={handleQRLogin} />
+        <QRScanner onScan={handleQRScan} onError={handleQRError} />
       ) : (
         <form onSubmit={handleEmailPasswordLogin}>
           <div>
