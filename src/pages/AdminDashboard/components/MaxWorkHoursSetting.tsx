@@ -1,11 +1,12 @@
-import { Component, createSignal, onMount } from "solid-js";
+import { Component, createSignal, createEffect } from "solid-js";
 import { supabase } from "../../../lib/supabase";
 
 const MaxWorkHoursSetting: Component = () => {
-  const [maxWorkHours, setMaxWorkHours] = createSignal("");
+  const [maxWorkHours, setMaxWorkHours] = createSignal<number>(8);
+  const [isLoading, setIsLoading] = createSignal(true);
   const [error, setError] = createSignal<string | null>(null);
 
-  onMount(async () => {
+  createEffect(async () => {
     try {
       const { data, error } = await supabase
         .from("settings")
@@ -14,43 +15,56 @@ const MaxWorkHoursSetting: Component = () => {
         .single();
 
       if (error) throw error;
-      setMaxWorkHours(data.value);
+
+      if (data) {
+        setMaxWorkHours(Number(data.value));
+      }
     } catch (err) {
-      console.error("設定の取得に失敗しました:", err);
-      setError("設定の取得に失敗しました。");
+      console.error("最大勤務時間の取得に失敗しました:", err);
+      setError("最大勤務時間の取得に失敗しました。");
+    } finally {
+      setIsLoading(false);
     }
   });
 
-  const updateMaxWorkHours = async (e: Event) => {
+  const handleSubmit = async (e: Event) => {
     e.preventDefault();
+    setError(null);
+
     try {
       const { error } = await supabase
         .from("settings")
-        .update({ value: maxWorkHours() })
-        .eq("key", "max_work_hours");
+        .upsert({ key: "max_work_hours", value: maxWorkHours().toString() });
 
       if (error) throw error;
-      alert("最大勤務時間が更新されました。");
+
+      console.log("最大勤務時間を更新しました。");
     } catch (err) {
-      console.error("設定の更新に失敗しました:", err);
-      setError("設定の更新に失敗しました。");
+      console.error("最大勤務時間の更新に失敗しました:", err);
+      setError("最大勤務時間の更新に失敗しました。");
     }
   };
 
   return (
     <div class="max-work-hours-setting">
-      <h3>最大勤務時間設定</h3>
-      <form onSubmit={updateMaxWorkHours}>
-        <input
-          type="number"
-          value={maxWorkHours()}
-          onInput={(e) => setMaxWorkHours(e.currentTarget.value)}
-          min="1"
-          step="0.5"
-          required
-        />
-        <button type="submit">更新</button>
-      </form>
+      <h2>最大勤務時間設定</h2>
+      {isLoading() ? (
+        <p>読み込み中...</p>
+      ) : (
+        <form onSubmit={handleSubmit}>
+          <label for="max-work-hours">最大勤務時間 (時間):</label>
+          <input
+            id="max-work-hours"
+            type="number"
+            min="1"
+            max="24"
+            value={maxWorkHours()}
+            onInput={(e) => setMaxWorkHours(Number(e.currentTarget.value))}
+            required
+          />
+          <button type="submit">更新</button>
+        </form>
+      )}
       {error() && <p class="error">{error()}</p>}
     </div>
   );
