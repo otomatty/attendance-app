@@ -1,29 +1,40 @@
-import { Component, Show, createEffect, createSignal } from "solid-js";
-import { useNavigate } from "@solidjs/router";
+import { Component, createSignal, createEffect, Show } from "solid-js";
+import { Navigate } from "@solidjs/router";
 import { useAdminAuth } from "../contexts/AdminAuthContext";
 
-const ProtectedAdminRoute: Component<{ children: any }> = (props) => {
-  const { isAdmin, checkAdminStatus } = useAdminAuth();
-  const navigate = useNavigate();
-  const [isChecking, setIsChecking] = createSignal(true);
+const ProtectedAdminRoute: Component<{ component: Component }> = (props) => {
+  const [isChecked, setIsChecked] = createSignal<boolean>(false);
+  const [isAuthenticated, setIsAuthenticated] = createSignal<boolean>(false);
+  const isDevelopment = import.meta.env.DEV;
 
-  createEffect(async () => {
-    setIsChecking(true);
-    await checkAdminStatus();
-    setIsChecking(false);
-    if (!isAdmin()) {
-      navigate("/admin/login", { replace: true });
+  createEffect(() => {
+    if (isDevelopment) {
+      setIsChecked(true);
+      setIsAuthenticated(true);
+    } else {
+      const checkAuth = async () => {
+        try {
+          const { isAdmin, checkAdminStatus } = useAdminAuth();
+          await checkAdminStatus();
+          setIsAuthenticated(isAdmin());
+        } catch (error) {
+          console.error("認証チェックエラー:", error);
+          setIsAuthenticated(false);
+        } finally {
+          setIsChecked(true);
+        }
+      };
+      checkAuth();
     }
   });
 
   return (
-    <Show when={!isChecking()} fallback={<div>権限を確認中...</div>}>
-      <Show
-        when={isAdmin()}
-        fallback={<div>アクセス権限がありません。リダイレクトします...</div>}
-      >
-        {props.children}
-      </Show>
+    <Show when={isChecked()}>
+      {isAuthenticated() ? (
+        <props.component />
+      ) : (
+        <Navigate href="/admin/login" />
+      )}
     </Show>
   );
 };

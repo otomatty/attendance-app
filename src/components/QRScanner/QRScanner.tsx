@@ -4,6 +4,7 @@ import { Html5QrcodeScanner } from "html5-qrcode";
 interface QRScannerProps {
   onScan: (decodedText: string) => void;
   onError?: (error: string) => void;
+  onBack: () => void; // 新しく追加
 }
 
 const QRScanner: Component<QRScannerProps> = (props) => {
@@ -49,6 +50,10 @@ const QRScanner: Component<QRScannerProps> = (props) => {
           <p>スキャン結果: {scanResult()}</p>
         </div>
       )}
+      <button onClick={props.onBack} class="back-button">
+        戻る
+      </button>{" "}
+      {/* 新しく追加 */}
     </div>
   );
 };

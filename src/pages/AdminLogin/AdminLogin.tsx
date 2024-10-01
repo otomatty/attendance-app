@@ -1,14 +1,7 @@
 import { Component, createSignal } from "solid-js";
 import { useNavigate } from "@solidjs/router";
-import { supabase } from "../../lib/supabase";
+// import { supabase } from "../../lib/supabase";
 import QRScanner from "../../components/QRScanner/QRScanner";
-
-// 一時パスワード生成関数を追加
-function generateTempPassword(): string {
-  return (
-    Math.random().toString(36).slice(-8) + Math.random().toString(36).slice(-8)
-  );
-}
 
 const AdminLogin: Component = () => {
   const [email, setEmail] = createSignal("");
@@ -20,7 +13,11 @@ const AdminLogin: Component = () => {
   const handleEmailPasswordLogin = async (e: Event) => {
     e.preventDefault();
     setError(null);
+    // 開発段階では、どんな認証情報でもログインを許可します
+    navigate("/admin/dashboard");
 
+    // 本番環境用の認証ロジックはコメントアウトしています
+    /*
     try {
       const { data, error } = await supabase.auth.signInWithPassword({
         email: email(),
@@ -49,11 +46,16 @@ const AdminLogin: Component = () => {
       console.error("ログインエラー:", err);
       setError("ログインに失敗しました。認証情報を確認してください。");
     }
+    */
   };
 
   const handleQRScan = async (decodedText: string) => {
     setError(null);
+    // 開発段階では、QRコードの内容に関わらずログインを許可します
+    navigate("/admin/dashboard");
 
+    // 以下の認証ロジックはコメントアウトしています
+    /*
     try {
       // 従業員情報と管理者権限を確認
       const { data, error } = await supabase
@@ -65,39 +67,8 @@ const AdminLogin: Component = () => {
       if (error) throw error;
 
       if (data && data.is_admin) {
-        // 管理者権限がある場合、一時的なパスワードでサインイン
-        const tempPassword = generateTempPassword();
-        const { data: authData, error: authError } = await supabase.auth.signUp(
-          {
-            email: data.email,
-            password: tempPassword,
-          }
-        );
-
-        if (authError) throw authError;
-
-        if (authData.user) {
-          // サインアップ成功後、すぐにサインイン
-          const { data: signInData, error: signInError } =
-            await supabase.auth.signInWithPassword({
-              email: data.email,
-              password: tempPassword,
-            });
-
-          if (signInError) throw signInError;
-
-          if (signInData.user && signInData.session) {
-            // セッション情報を保存するなどの処理を行う
-            console.log("ログイン成功:", signInData.user.email);
-
-            // ログイン成功、ダッシュボードへリダイレクト
-            navigate("/admin/dashboard");
-          } else {
-            throw new Error("セッションの作成に失敗しました。");
-          }
-        } else {
-          throw new Error("認証に失敗しました。");
-        }
+        // 管理者権限がある場合、ダッシュボードへリダイレクト
+        navigate("/admin/dashboard");
       } else {
         throw new Error("管理者権限がありません。");
       }
@@ -105,17 +76,31 @@ const AdminLogin: Component = () => {
       console.error("QRログインエラー:", err);
       setError("ログインに失敗しました。QRコードを確認してください。");
     }
+    */
   };
 
   const handleQRError = (error: string) => {
     setError(error);
   };
 
+  const handleBack = () => {
+    setShowQRScanner(false);
+    setError(null);
+  };
+
+  const handleSkipLogin = () => {
+    navigate("/admin/dashboard");
+  };
+
   return (
     <div class="admin-login">
       <h1>管理者ログイン</h1>
       {showQRScanner() ? (
-        <QRScanner onScan={handleQRScan} onError={handleQRError} />
+        <QRScanner
+          onScan={handleQRScan}
+          onError={handleQRError}
+          onBack={handleBack}
+        />
       ) : (
         <form onSubmit={handleEmailPasswordLogin}>
           <div>
@@ -146,6 +131,7 @@ const AdminLogin: Component = () => {
           ? "メール/パスワードログインに切り替え"
           : "QRコードログインに切り替え"}
       </button>
+      <button onClick={handleSkipLogin}>ログインをスキップ</button>
       {error() && <p class="error">{error()}</p>}
     </div>
   );

@@ -1,23 +1,24 @@
-import {
-  createContext,
-  useContext,
-  JSX,
-  createSignal,
-  createEffect,
-} from "solid-js";
+import { createContext, useContext, Component, createSignal } from "solid-js";
 import { supabase } from "../lib/supabase";
 
-interface AdminAuthContextValue {
+interface AdminAuthContextType {
   isAdmin: () => boolean;
   checkAdminStatus: () => Promise<void>;
 }
 
-const AdminAuthContext = createContext<AdminAuthContextValue>();
+const AdminAuthContext = createContext<AdminAuthContextType>();
 
-export function AdminAuthProvider(props: { children: JSX.Element }) {
+export const AdminAuthProvider: Component<{ children: any }> = (props) => {
   const [isAdmin, setIsAdmin] = createSignal(false);
+  const isDevelopment = import.meta.env.DEV; // 開発環境かどうかを判定
 
   const checkAdminStatus = async () => {
+    if (isDevelopment) {
+      setIsAdmin(true); // 開発環境では常に管理者とみなす
+      return;
+    }
+
+    // 本番環境用のチェックロジック
     const {
       data: { user },
     } = await supabase.auth.getUser();
@@ -29,33 +30,21 @@ export function AdminAuthProvider(props: { children: JSX.Element }) {
         .single();
 
       if (error) {
-        console.error("Admin status check failed:", error);
+        console.error("管理者権限の確認に失敗しました:", error);
         setIsAdmin(false);
       } else {
-        setIsAdmin(data.is_admin);
+        setIsAdmin(data?.is_admin || false);
       }
     } else {
       setIsAdmin(false);
     }
   };
 
-  createEffect(() => {
-    checkAdminStatus();
-  });
-
   return (
-    <AdminAuthContext.Provider
-      value={{ isAdmin: () => isAdmin(), checkAdminStatus }}
-    >
+    <AdminAuthContext.Provider value={{ isAdmin, checkAdminStatus }}>
       {props.children}
     </AdminAuthContext.Provider>
   );
-}
+};
 
-export function useAdminAuth() {
-  const context = useContext(AdminAuthContext);
-  if (!context) {
-    throw new Error("useAdminAuth must be used within an AdminAuthProvider");
-  }
-  return context;
-}
+export const useAdminAuth = () => useContext(AdminAuthContext)!;
