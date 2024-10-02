@@ -1,5 +1,5 @@
 import { Component, createSignal, onMount, Show, createEffect } from "solid-js";
-import { supabase } from "../../../lib/supabase";
+import { supabase } from "../../../lib/supabase/client";
 
 interface FaceCaptureProps {
   onCapture: (imageData: string) => void;

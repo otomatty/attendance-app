@@ -1,16 +1,13 @@
 import { Component, createSignal, Show, onMount } from "solid-js";
-import { supabase } from "../../../lib/supabase";
+import { getLatestAttendanceRecord } from "../../../../lib/supabase/attendance";
+import { getEmployeeById } from "../../../../lib/supabase/employees";
+import {
+  getMaxWorkHours,
+  createAlert,
+} from "../../../../lib/supabase/settings";
 
 interface AlertDialogProps {
   employeeId: string;
-}
-
-interface AttendanceRecord {
-  check_in: string;
-  check_out: string | null;
-  employees: {
-    name: string;
-  };
 }
 
 const AlertDialog: Component<AlertDialogProps> = (props) => {
@@ -20,36 +17,21 @@ const AlertDialog: Component<AlertDialogProps> = (props) => {
 
   const checkAndShowAlert = async () => {
     try {
-      // 最大勤務時間の設定を取得
-      const { data: settingsData, error: settingsError } = await supabase
-        .from("settings")
-        .select("value")
-        .eq("key", "max_work_hours")
-        .single();
+      const maxWorkHours = await getMaxWorkHours();
+      const latestRecord = await getLatestAttendanceRecord(props.employeeId);
+      const employee = await getEmployeeById(props.employeeId);
 
-      if (settingsError) throw settingsError;
-      const maxWorkHours = parseFloat(settingsData.value);
+      if (employee) {
+        setEmployeeName(employee.first_name + " " + employee.last_name);
+      }
 
-      // 最新の勤怠記録を取得
-      const { data, error } = await supabase
-        .from("attendance_records")
-        .select("check_in, check_out, employees!inner(name)")
-        .eq("employee_id", props.employeeId)
-        .order("created_at", { ascending: false })
-        .limit(1)
-        .single();
-
-      if (error) throw error;
-
-      if (data) {
-        const record = data as unknown as AttendanceRecord;
-        setEmployeeName(record.employees.name);
-        const lastCheckIn = new Date(record.check_in);
+      if (latestRecord) {
+        const lastCheckIn = new Date(latestRecord.check_in);
         const now = new Date();
         const hoursSinceLastCheckIn =
           (now.getTime() - lastCheckIn.getTime()) / (1000 * 60 * 60);
 
-        if (!record.check_out && hoursSinceLastCheckIn > maxWorkHours) {
+        if (!latestRecord.check_out && hoursSinceLastCheckIn > maxWorkHours) {
           setShowAlert(true);
         }
       }
@@ -59,7 +41,6 @@ const AlertDialog: Component<AlertDialogProps> = (props) => {
     }
   };
 
-  // コンポーネントがマウントされたときにチェックを実行
   onMount(() => {
     checkAndShowAlert();
   });
@@ -72,20 +53,10 @@ const AlertDialog: Component<AlertDialogProps> = (props) => {
           // 打刻処理（QRScannerコンポーネントと同様の処理）
           break;
         case "onLeave":
-          // 休暇中としてマーク
-          await supabase.from("alerts").insert({
-            employee_id: props.employeeId,
-            status: "on_leave",
-            alert_time: new Date().toISOString(),
-          });
+          await createAlert(props.employeeId, "on_leave");
           break;
         case "checkLater":
-          // 後で確認としてマーク
-          await supabase.from("alerts").insert({
-            employee_id: props.employeeId,
-            status: "check_later",
-            alert_time: new Date().toISOString(),
-          });
+          await createAlert(props.employeeId, "check_later");
           break;
       }
     } catch (err) {
@@ -98,7 +69,7 @@ const AlertDialog: Component<AlertDialogProps> = (props) => {
     <Show when={showAlert()}>
       <div class="alert-dialog">
         <h3>打刻忘れの可能性があります</h3>
-        <p>{employeeName()}さん、以下のオプシ��ンから選択してください：</p>
+        <p>{employeeName()}さん、以下のオプションから選択してください：</p>
         <button onClick={() => handleOption("clockIn")}>
           打刻忘れ - 今すぐ打刻
         </button>

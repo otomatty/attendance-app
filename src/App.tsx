@@ -1,6 +1,7 @@
 import { Component } from "solid-js";
 import { Router, Route } from "@solidjs/router";
 import Home from "./pages/Home/Home";
+import EmployeeAttendance from "./pages/EmployeeAttendance/EmployeeAttendance";
 import AdminLogin from "./pages/AdminLogin/AdminLogin";
 import AdminDashboard from "./pages/AdminDashboard/AdminDashboard";
 import ProtectedAdminRoute from "./components/ProtectedAdminRoute";
@@ -8,6 +9,7 @@ import AdminHeader from "./components/AdminHeader/AdminHeader";
 import AttendanceEdit from "./pages/AttendanceEdit/AttendanceEdit";
 import Reports from "./pages/Reports/Reports";
 import EmployeeManagement from "./pages/EmployeeManagement/EmployeeManagement";
+import CompanyRegistration from "./pages/CompanyRegistration/CompanyRegistration";
 
 const AdminLayout: Component<{ children: any }> = (props) => {
   return (
@@ -22,7 +24,9 @@ const App: Component = () => {
   return (
     <Router>
       <Route path="/" component={Home} />
+      <Route path="/employee/attendance" component={EmployeeAttendance} />
       <Route path="/admin/login" component={AdminLogin} />
+      <Route path="/company/register" component={CompanyRegistration} />
       <Route
         path="/admin"
         component={(props) => <AdminLayout>{props.children}</AdminLayout>}

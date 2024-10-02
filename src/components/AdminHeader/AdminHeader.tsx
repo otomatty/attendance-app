@@ -1,25 +1,36 @@
 import { Component } from "solid-js";
 import { A } from "@solidjs/router";
+import { adminHeader, nav, ul, li, link } from "./AdminHeader.css";
 
 const AdminHeader: Component = () => {
   return (
-    <header class="admin-header">
-      <nav>
-        <ul>
-          <li>
-            <A href="/admin/dashboard">ダッシュボード</A>
+    <header class={adminHeader}>
+      <nav class={nav}>
+        <ul class={ul}>
+          <li class={li}>
+            <A href="/admin/dashboard" class={link}>
+              ダッシュボード
+            </A>
           </li>
-          <li>
-            <A href="/admin/employees">従業員管理</A>
+          <li class={li}>
+            <A href="/admin/employees" class={link}>
+              従業員管理
+            </A>
           </li>
-          <li>
-            <A href="/admin/attendance">勤怠管理</A>
+          <li class={li}>
+            <A href="/admin/attendance" class={link}>
+              勤怠管理
+            </A>
           </li>
-          <li>
-            <A href="/admin/reports">レポート</A>
+          <li class={li}>
+            <A href="/admin/reports" class={link}>
+              レポート
+            </A>
           </li>
-          <li>
-            <A href="/">ホームに戻る</A>
+          <li class={li}>
+            <A href="/" class={link}>
+              ホームに戻る
+            </A>
           </li>
         </ul>
       </nav>

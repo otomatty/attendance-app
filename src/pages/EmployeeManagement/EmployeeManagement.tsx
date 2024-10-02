@@ -1,91 +1,154 @@
-import { Component, createSignal, createEffect, For } from "solid-js";
+import { Component, createSignal, createEffect } from "solid-js";
 import { createStore } from "solid-js/store";
-
-interface Employee {
-  id: number;
-  name: string;
-  email: string;
-  position: string;
-}
+import { Employee, PartialEmployee } from "../../types/employee";
+import {
+  getAllEmployees,
+  createEmployee,
+  updateEmployee,
+  deleteEmployee,
+} from "../../lib/supabase/employees";
+import EmployeeList from "./components/EmployeeList/EmployeeList";
+import EmployeeForm from "./components/EmployeeForm/EmployeeForm";
+import QRCodeGenerator from "../../components/QRCodeGenerator/QRCodeGenerator";
+import Modal from "../../components/Modal/Modal";
+import {
+  container,
+  title,
+  addButton,
+  loadingText,
+  errorMessage,
+} from "./EmployeeManagement.css";
 
 const EmployeeManagement: Component = () => {
   const [employees, setEmployees] = createStore<Employee[]>([]);
   const [loading, setLoading] = createSignal(true);
+  const [isModalOpen, setIsModalOpen] = createSignal(false);
+  const [editingEmployee, setEditingEmployee] = createSignal<
+    Employee | undefined
+  >(undefined);
+  const [error, setError] = createSignal<string | null>(null);
+  const [selectedEmployeeForQR, setSelectedEmployeeForQR] = createSignal<
+    Employee | undefined
+  >(undefined);
+  const [isQRModalOpen, setIsQRModalOpen] = createSignal(false);
+
+  const fetchEmployees = async () => {
+    try {
+      const fetchedEmployees = await getAllEmployees();
+      setEmployees(fetchedEmployees);
+    } catch (err) {
+      console.error("従業員データの取得に失敗しました:", err);
+      setError("従業員データの取得に失敗しました。");
+    } finally {
+      setLoading(false);
+    }
+  };
 
   createEffect(() => {
-    // TODO: APIから従業員データを取得する
-    // 仮のデータをセット
-    setEmployees([
-      {
-        id: 1,
-        name: "山田太郎",
-        email: "yamada@example.com",
-        position: "マネージャー",
-      },
-      {
-        id: 2,
-        name: "佐藤花子",
-        email: "sato@example.com",
-        position: "エンジニア",
-      },
-    ]);
-    setLoading(false);
+    fetchEmployees();
   });
 
+  const handleAdd = () => {
+    console.log("handleAdd called");
+    setEditingEmployee(undefined);
+    setIsModalOpen(true);
+    console.log("isModalOpen after handleAdd:", isModalOpen());
+  };
+
+  const handleEdit = (employee: Employee) => {
+    console.log("handleEdit called", employee);
+    setEditingEmployee(employee);
+    setIsModalOpen(true);
+    console.log("isModalOpen after handleEdit:", isModalOpen());
+  };
+
+  const handleDelete = async (id: string) => {
+    try {
+      await deleteEmployee(id);
+      setEmployees(employees.filter((emp) => emp.id !== id));
+    } catch (err) {
+      console.error("従業員の削除に失敗しました:", err);
+      setError("従業員の削除に失敗しました。");
+    }
+  };
+
+  const handleSubmit = async (employee: PartialEmployee) => {
+    try {
+      if (editingEmployee()) {
+        const updatedEmployee = await updateEmployee(
+          editingEmployee()!.id,
+          employee
+        );
+        setEmployees((prev) =>
+          prev.map((emp) =>
+            emp.id === updatedEmployee.id ? updatedEmployee : emp
+          )
+        );
+      } else {
+        const newEmployee = await createEmployee(employee);
+        setEmployees((prev) => [...prev, newEmployee]);
+      }
+      setIsModalOpen(false);
+      setEditingEmployee(undefined);
+    } catch (err) {
+      console.error("従業員の保存に失敗しました:", err);
+      setError("従業員の保存に失敗しました。");
+    }
+  };
+
+  const handleCancel = () => {
+    setIsModalOpen(false);
+    setEditingEmployee(undefined);
+  };
+
+  const handleGenerateQRCode = (employee: Employee) => {
+    setSelectedEmployeeForQR(employee);
+    setIsQRModalOpen(true);
+  };
+
+  const handleCloseQRModal = () => {
+    setIsQRModalOpen(false);
+    setSelectedEmployeeForQR(undefined);
+  };
+
   return (
-    <div>
-      <h1>従業員管理</h1>
+    <div class={container}>
+      <h1 class={title}>従業員管理</h1>
       {loading() ? (
-        <p>読み込み中...</p>
+        <p class={loadingText}>読み込み中...</p>
       ) : (
-        <table>
-          <thead>
-            <tr>
-              <th>ID</th>
-              <th>名前</th>
-              <th>メールアドレス</th>
-              <th>役職</th>
-              <th>操作</th>
-            </tr>
-          </thead>
-          <tbody>
-            <For each={employees}>
-              {(employee) => (
-                <tr>
-                  <td>{employee.id}</td>
-                  <td>{employee.name}</td>
-                  <td>{employee.email}</td>
-                  <td>{employee.position}</td>
-                  <td>
-                    <button onClick={() => handleEdit(employee)}>編集</button>
-                    <button onClick={() => handleDelete(employee.id)}>
-                      削除
-                    </button>
-                  </td>
-                </tr>
-              )}
-            </For>
-          </tbody>
-        </table>
+        <>
+          <EmployeeList
+            employees={employees}
+            onEdit={handleEdit}
+            onDelete={handleDelete}
+            onGenerateQRCode={handleGenerateQRCode}
+          />
+          <button class={addButton} onClick={handleAdd}>
+            新規従業員追加
+          </button>
+          <Modal isOpen={isModalOpen()} onClose={handleCancel}>
+            <EmployeeForm
+              employee={editingEmployee()}
+              onSubmit={handleSubmit}
+              onCancel={handleCancel}
+            />
+          </Modal>
+          {isQRModalOpen() && selectedEmployeeForQR() && (
+            <QRCodeGenerator
+              employeeId={selectedEmployeeForQR()!.id}
+              employeeName={`${selectedEmployeeForQR()!.first_name} ${
+                selectedEmployeeForQR()!.last_name
+              }`}
+              isOpen={isQRModalOpen()}
+              onClose={handleCloseQRModal}
+            />
+          )}
+          {error() && <p class={errorMessage}>{error()}</p>}
+        </>
       )}
-      <button onClick={handleAdd}>新規従業員追加</button>
     </div>
   );
-};
-
-const handleEdit = (employee: Employee) => {
-  // TODO: 編集機能を実装
-  console.log("編集:", employee);
-};
-
-const handleDelete = (id: number) => {
-  // TODO: 削除機能を実装
-  console.log("削除:", id);
-};
-
-const handleAdd = () => {
-  // TODO: 追加機能を実装
-  console.log("新規従業員追加");
 };
 
 export default EmployeeManagement;

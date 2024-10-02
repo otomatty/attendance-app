@@ -1,5 +1,5 @@
 import { createContext, useContext, Component, createSignal } from "solid-js";
-import { supabase } from "../lib/supabase";
+import { supabase } from "../lib/supabase/client";
 
 interface AdminAuthContextType {
   isAdmin: () => boolean;
